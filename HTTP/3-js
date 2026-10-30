@@ -1,0 +1,10 @@
+// server.js
+import { createServer } from 'node:http3';
+
+const server = createServer((req, res) => {
+  res.end('Hello from Node 28 (HTTP/3)');
+});
+
+server.listen(443, () => {
+  console.log('🚀 Node 28 écoute en QUIC/HTTP3');
+});
