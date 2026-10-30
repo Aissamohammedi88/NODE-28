@@ -24,12 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "📥 Checkout Code"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: "🟢 Setup Node.js 20"
-        uses: actions/setup-node@v4
+      - name: "🟢 Setup Node.js 24"
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           # Le cache intelligent : on ne l'active que si package-lock.json existe
           cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
 
@@ -69,10 +69,10 @@ jobs:
       - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
-      - name: "🟢 Setup Node.js 22 (Registry GitHub)"
+      - name: "🟢 Setup Node.js 24 (Registry GitHub)"
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://npm.pkg.github.com/
           scope: "@Aissamohammedi88" # Remplace par ton scope npm
 
@@ -104,10 +104,10 @@ jobs:
       - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
-      - name: "🟢 Setup Node.js 20 (Registry NPM)"
+      - name: "🟢 Setup Node.js 24 (Registry NPM)"
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org/
 
       - name: "📦 Install Dependencies"
