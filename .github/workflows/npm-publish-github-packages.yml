@@ -69,10 +69,10 @@ jobs:
       - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
-      - name: "🟢 Setup Node.js 20 (Registry GitHub)"
+      - name: "🟢 Setup Node.js 22 (Registry GitHub)"
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://npm.pkg.github.com/
           scope: "@Aissamohammedi88" # Remplace par ton scope npm
 
