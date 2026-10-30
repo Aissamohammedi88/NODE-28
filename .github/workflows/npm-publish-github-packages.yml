@@ -1,0 +1,153 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# NEXUS NODE V28 — Package Publisher
+# Construit, teste, signe et publie sur GitHub Packages & NPM.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: "📦 Node.js Package Publisher"
+
+on:
+  release:
+    types: [created]
+
+# Permissions minimales requises
+permissions:
+  contents: read
+  packages: write
+  id-token: write # Requis pour la provenance SLSA
+
+jobs:
+  # ============================================================================
+  # JOB 1 : BUILD & TEST (Le portail de qualité)
+  # ============================================================================
+  build-and-test:
+    name: "🏗️ Build & Test"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "🟢 Setup Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # Le cache intelligent : on ne l'active que si package-lock.json existe
+          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+
+      - name: "📦 Install Dependencies"
+        run: npm ci
+
+      - name: "🧪 Run Tests"
+        run: npm test
+
+      - name: "🏗️ Build Package (si script défini)"
+        run: |
+          if grep -q "\"build\"" package.json; then
+            npm run build
+          else
+            echo "Pas de script 'build' défini. On publie le code source."
+          fi
+
+      - name: "📤 Upload Build Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-build
+          path: dist/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================================================
+  # JOB 2 : PUBLICATION GITHUB PACKAGES
+  # ============================================================================
+  publish-gpr:
+    name: "🚀 Publish to GitHub Packages"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: "📥 Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "🟢 Setup Node.js 20 (Registry GitHub)"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com/
+          scope: "@Aissamohammedi88" # Remplace par ton scope npm
+
+      - name: "📦 Install Dependencies"
+        run: npm ci
+
+      - name: "📥 Download Build Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-build
+          path: dist/
+        continue-on-error: true
+
+      - name: "🚀 Publish to GitHub Packages"
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================================
+  # JOB 3 : PUBLICATION NPM PUBLIC (Optionnel)
+  # ============================================================================
+  publish-npm:
+    name: "🌍 Publish to NPM Public"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    # Ce job ne s'exécute que si tu as configuré un secret NPM_TOKEN
+    if: ${{ secrets.NPM_TOKEN != '' }}
+    steps:
+      - name: "📥 Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "🟢 Setup Node.js 20 (Registry NPM)"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: "📦 Install Dependencies"
+        run: npm ci
+
+      - name: "📥 Download Build Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-build
+          path: dist/
+        continue-on-error: true
+
+      - name: "🚀 Publish to NPM Public"
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ============================================================================
+  # JOB 4 : ATTESTATION SLSA (Signature Cryptographique)
+  # ============================================================================
+  provenance:
+    name: "🔏 SLSA Provenance"
+    needs: [publish-gpr]
+    if: always() && needs.publish-gpr.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      attestations: write
+    steps:
+      - name: "📥 Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "📥 Download Build Artifact"
+        uses: actions/download-artifact@v4
+        with:
+          name: npm-build
+          path: dist/
+
+      - name: "Generate SLSA Attestation"
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'dist/*'
