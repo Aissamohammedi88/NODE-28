@@ -1,4 +1,4 @@
-nstall_base_tools() {info "Installation des outils de base..."
+install_base_tools() {info "Installation des outils de base..."
 
 if [ "$OS" = "alpine" ]; then
 $PKG_UPDATE
